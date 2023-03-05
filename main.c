@@ -55,8 +55,9 @@ int forker (int totaltoLaunch, int simulLimit, char* timeLimit, int* totalLaunch
 	}
       else if (pid == 0)
 	{
-        char* args[]={"./worker",timeLimit,0};
-        execlp(args[0],args[0],args[1],args[2]);
+        //char* args[]={"./worker",timeLimit,0};
+        //execlp(args[0],args[0],args[1],args[2]);
+        sleep(5);
 	}
       else if (pid > 0)
 	{
@@ -96,7 +97,7 @@ processTable[i].startSeconds = 0;
 processTable[i].startNano = 0;
 }
 }
-void printStruct (struct PCB *processTable,int* shmSec,int* shmNano)
+void printStruct (struct PCB *processTable,int* shmSec,int* shmNano, FILE* fLog)
 {
   printf("OSS PID: %d SysClock: %d SysclockNano: %d\n", getpid(),*shmSec,*shmNano);
   printf ("Process Table: \n");
@@ -107,6 +108,18 @@ void printStruct (struct PCB *processTable,int* shmSec,int* shmNano)
       printf ("%d        %d       %d    %d        %d\n", i,
 	      processTable[i].occupied, processTable[i].pid,
 	      processTable[i].startSeconds, processTable[i].startNano);
+    }
+    
+    //now write into file
+    int j = 0;
+  fprintf(fLog,"OSS PID: %d SysClock: %d SysclockNano: %d\n", getpid(),*shmSec,*shmNano);
+  fprintf (fLog, "Process Table: \n");
+  fprintf (fLog, "ENTRY  OCCUPIED  PID  STARTS  STARTN\n");
+    for (j; j < 20; j++)
+    {
+      fprintf (fLog, "%d        %d       %d    %d        %d\n", j,
+	      processTable[j].occupied, processTable[j].pid,
+	      processTable[j].startSeconds, processTable[j].startNano);
     }
 }
 
@@ -125,13 +138,13 @@ signalReceived = true;
 char *x = NULL;
 char *y = NULL;
 char *z = NULL;
-
+char *fArg = NULL;
 
 
 int main (int argc, char **argv)
 {
   int option;
-  while ((option = getopt (argc, argv, "n:s:t:h")) != -1)
+  while ((option = getopt (argc, argv, "n:s:t:f:h")) != -1)
     {
       switch (option)
 	{
@@ -147,6 +160,8 @@ int main (int argc, char **argv)
 	case 't':
 	  z = optarg;
 	  break;
+	case 'f':
+	    
 	}
     }
  
@@ -165,6 +180,14 @@ int main (int argc, char **argv)
   PCB processTable[20];
  // bool stillChildrenRunning = true;
   bool initialLaunch = false;
+ //create file for LOGFILE
+ FILE* fLog;
+ fLog = fopen("fArg", "a");
+ if (fLog == NULL)
+ {
+     printf("ERROR: Could not open file\n");
+     return 1;
+ }
  
  signal(SIGINT, sig_handler);
  signal(SIGALRM, sig_alarmHandler);
@@ -189,7 +212,7 @@ int main (int argc, char **argv)
   // FORK CHILDREN 
     incrementClock(shmSec,shmNano);
     if (*shmNano == 500000){
-    printStruct (processTable, shmSec, shmNano);
+    printStruct (processTable, shmSec, shmNano,fLog);
     }
     if(initialLaunch == false){
         exCess = forker (totaltoLaunch, simulLimit, timeLimit, &totalLaunched, processTable, shmSec, shmNano);
